@@ -1,7 +1,9 @@
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'CDS Root Priority'
+@EndUserText.label: 'Ayuda de Búsqueda CDS Root Priority'
 @Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.dataCategory: #VALUE_HELP
+@Metadata.allowExtensions: true
 define view entity Z_R_priority_088
   as select from zdt_priority_088
 {

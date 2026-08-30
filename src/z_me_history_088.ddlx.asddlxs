@@ -1,0 +1,50 @@
+@Metadata.layer: #INDUSTRY
+
+@UI:  { headerInfo: {   typeName: 'Incident', typeNamePlural: 'History',
+        title:      {   type: #STANDARD, value: 'HisId'  }  },
+        presentationVariant: [{sortOrder: [{by: 'HisId', direction: #ASC }],
+        visualizations: [{ type:  #AS_LINEITEM }] }] }
+annotate entity Z_c_history_088 with
+{
+
+  @UI.facet: [{  id: 'History',
+                 purpose: #STANDARD,
+                 type:#IDENTIFICATION_REFERENCE ,
+                 position: 10   }]
+
+  @UI.hidden: true
+  HisUuid;
+
+  @UI.lineItem: [{ position: 20, importance: #HIGH, label: 'IncUuid' }]
+  @UI.identification: [{position: 20 , label: 'History Id'}]
+  @UI.hidden: true
+  IncUuid;
+
+  @UI.lineItem: [{ position: 30, importance: #HIGH, label: 'History Id' }]
+  @UI.identification: [{position: 30,   label: 'History Id' }]
+  HisId;
+
+  @UI.lineItem: [{ position:40, importance: #LOW, label: 'Previous Status' }]
+  @UI.identification: [{position: 40,   label: 'Previous Status' }]
+  PreviousStatus;
+
+  @UI.lineItem: [{ position:50, importance: #LOW, label: 'New Status' }]
+  @UI.identification: [{position: 50 , label: 'New Status'  }]
+  NewStatus;
+
+  @UI.lineItem: [{ position:60, importance: #LOW, label: 'Observation' }]
+  @UI.identification: [{position: 60, label: 'Observation' }]
+  Text;
+
+
+  @UI.hidden: true
+  LocalCreatedBy;
+  @UI.hidden: true
+  LocalCreatedAt;
+  @UI.hidden: true
+  LocalLastChangedBy;
+  @UI.hidden: true
+  LocalLastChangedAt;
+  @UI.hidden: true
+  LastChangedAt;
+}

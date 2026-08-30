@@ -1,0 +1,117 @@
+managed implementation in class zbp_r_incident_088 unique;
+strict ( 2 );
+with draft;
+
+// ************** INCIDENT ***************** //
+define behavior for Z_R_INCIDENT_088 alias Incident
+persistent table zdt_inct_088
+draft table zdt_inctd_088
+lock master
+total etag LastChangedAt
+etag master LocalLastChangedAt
+authorization master ( global, instance )
+{
+
+  association _History { create; }
+
+  create ( authorization : global );
+  update;
+  delete;
+
+  //campos obligatorio al crear un registro
+  field ( mandatory )
+  title,
+  description,
+  priority;
+
+  //campos de solo lectura
+  field ( readonly )
+  IncUuid,
+  IncidentId,
+  status,
+  ChangedDate,
+  LocalCreatedBy,
+  LocalCreatedAt,
+  LocalLastChangedBy,
+  LocalLastChangedAt,
+  LastChangedAt;
+
+  //boton de accion ChangeStatus: le cambia el status al registro que estamos visualizando en ese momento
+  action ( features : instance, authorization : update ) ChangeStatus parameter z_a_ChangeStatus_088 result [1] $self;
+
+
+  draft action Resume;
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Edit;
+
+  draft determine action Prepare
+  {
+
+  }
+
+  mapping for zdt_inct_088
+    {
+      IncUuid            = inc_uuid;
+      IncidentId         = incident_id;
+      Title              = title;
+      Description        = description;
+      Status             = status;
+      Priority           = priority;
+      CreationDate       = creation_date;
+      ChangedDate        = changed_date;
+      LocalCreatedBy     = local_created_by;
+      LocalCreatedAt     = local_created_at;
+      LocalLastChangedBy = local_last_changed_by;
+      LocalLastChangedAt = local_last_changed_at;
+      LastChangedAt      = last_changed_at;
+    }
+
+}
+
+
+
+
+// ************** HISTORY ***************** //
+define behavior for Z_R_history_088 alias History
+persistent table zdt_inct_h_088
+draft table zdt_inctd_h_088
+lock dependent by _Incident
+authorization dependent by _Incident
+etag master LocalLastChangedAt
+
+{
+
+
+  association _Incident;
+
+  update;
+  delete;
+  field ( readonly )
+  HisUuid,
+  IncUuid,
+  HisId,
+  LocalCreatedBy,
+  LocalCreatedAt,
+  LocalLastChangedBy,
+  LocalLastChangedAt,
+  LastChangedAt;
+
+
+
+
+  mapping for zdt_inct_h_088
+    {
+      HisUUID            = his_uuid;
+      IncUUID            = inc_uuid;
+      HisID              = his_id;
+      PreviousStatus     = previous_status;
+      NewStatus          = new_status;
+      Text               = text;
+      LocalCreatedBy     = local_created_by;
+      LocalCreatedAt     = local_created_at;
+      LocalLastChangedBy = local_last_changed_by;
+      LocalLastChangedAt = local_last_changed_at;
+      LastChangedAt      = last_changed_at;
+    }
+}

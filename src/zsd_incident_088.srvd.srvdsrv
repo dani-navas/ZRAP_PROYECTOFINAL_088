@@ -1,0 +1,5 @@
+@EndUserText.label: 'Serivce Definition Incident'
+define service ZSD_INCIDENT_088 {
+  expose Z_c_INCIDENT_088 as Incident;
+  expose Z_c_history_088  as History;
+}

@@ -1,0 +1,26 @@
+projection;
+strict ( 2 );
+use draft;
+
+define behavior for Z_c_INCIDENT_088 alias Incident
+{
+  use create;
+  use update;
+  use delete;
+
+  use action Resume;
+  use action Activate;
+  use action Discard;
+  use action Edit;
+  use action Prepare;
+
+  use association _History { create; }
+}
+
+define behavior for Z_c_history_088 alias History
+{
+  use update;
+  use delete;
+
+  use association _Incident;
+}

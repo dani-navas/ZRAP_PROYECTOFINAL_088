@@ -1,0 +1,83 @@
+ @Metadata.layer: #INDUSTRY
+
+@UI:  { headerInfo: {   typeName: 'Incident', typeNamePlural: 'Incidents',
+        title:      {   type: #STANDARD, value: 'IncidentId'  }  },
+        presentationVariant: [{sortOrder: [{by: 'IncidentId', direction: #ASC }],
+        visualizations: [{ type:  #AS_LINEITEM }] }] }
+annotate entity Z_c_INCIDENT_088 with
+{
+
+ 
+  @UI.facet: [{ 
+  
+   id: 'Incident',
+                 purpose: #STANDARD,
+                 type:#IDENTIFICATION_REFERENCE ,
+                 position: 10,
+                 label: 'Incident' } ,
+
+                { id: 'History',
+                 purpose: #STANDARD,
+                 type:#LINEITEM_REFERENCE,
+                 position: 20,
+                 label: 'History',
+                 targetElement: '_History'  }]
+
+  @UI.hidden: true
+  @UI.identification: [{ position: 10 },
+                       { type: #FOR_ACTION, dataAction: 'ChangeStatus', label: 'ChangeStatus', position: 10 } ]
+  IncUuid;
+
+  @UI.lineItem: [{ position: 10, importance: #HIGH, label: 'Incident' }]
+  @UI.selectionField: [{position: 10 }]
+  IncidentId;
+
+  @UI.lineItem: [{ position: 20, importance: #LOW, label: 'Title' }]
+  //  @UI.selectionField: [{position: 20 }]
+  @UI.identification: [{position: 20 }]
+  Title;
+
+  @UI.lineItem: [{ position: 30, importance: #LOW, label: 'Incident Description' }]
+  @UI.selectionField: [{position:  30 }]
+  @UI.identification: [{position: 30 }]
+  Description;
+
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'z_r_status_088', element: 'StatusCode' }, useForValidation: true }]
+  @UI.textArrangement: #TEXT_LAST
+  @UI.lineItem: [{ position: 40, importance: #LOW, label: 'Incident Status' }]
+  @UI.selectionField: [{position: 40 }]
+  @UI.identification: [{position: 40 }]
+  Status;
+
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'z_r_priority_088', element: 'PriorityCode' }, useForValidation: true }]
+  @UI.textArrangement: #TEXT_LAST
+  @UI.lineItem: [{ position: 50, importance: #LOW, label: 'Incident Priority' }]
+  @UI.selectionField: [{position: 50 }]
+  @UI.identification: [{position: 50 }]
+  Priority;
+
+  @UI.lineItem: [{ position: 60, importance: #LOW, label: 'Creation Date' }]
+  @UI.selectionField: [{position: 60 }]
+  @UI.identification: [{position: 60 }]
+  CreationDate;
+
+  @UI.lineItem: [{ position: 70, importance: #LOW, label: 'Changed Date' }]
+  @UI.selectionField: [{position: 70 }]
+  @UI.identification: [{position: 70 }]
+  ChangedDate;
+
+  @UI.hidden: true
+  LocalCreatedBy;
+  @UI.hidden: true
+  LocalCreatedAt;
+  @UI.hidden: true
+  LocalLastChangedBy;
+  @UI.hidden: true
+  LocalLastChangedAt;
+  @UI.hidden: true
+  LastChangedAt;
+
+   @UI.hidden: true 
+  _History;
+
+}
