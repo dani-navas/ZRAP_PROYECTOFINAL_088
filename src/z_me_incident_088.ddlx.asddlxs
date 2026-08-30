@@ -6,11 +6,7 @@
         visualizations: [{ type:  #AS_LINEITEM }] }] }
 annotate entity Z_c_INCIDENT_088 with
 {
-
- 
-  @UI.facet: [{ 
-  
-   id: 'Incident',
+  @UI.facet: [{  id: 'Incident',
                  purpose: #STANDARD,
                  type:#IDENTIFICATION_REFERENCE ,
                  position: 10,
@@ -28,8 +24,9 @@ annotate entity Z_c_INCIDENT_088 with
                        { type: #FOR_ACTION, dataAction: 'ChangeStatus', label: 'ChangeStatus', position: 10 } ]
   IncUuid;
 
-  @UI.lineItem: [{ position: 10, importance: #HIGH, label: 'Incident' }]
+  @UI.lineItem: [{ position: 10, importance: #HIGH, label: 'Incident Id' }]
   @UI.selectionField: [{position: 10 }]
+  @UI.identification: [{position: 10 }]
   IncidentId;
 
   @UI.lineItem: [{ position: 20, importance: #LOW, label: 'Title' }]

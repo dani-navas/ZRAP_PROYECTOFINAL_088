@@ -12,11 +12,16 @@ etag master LocalLastChangedAt
 authorization master ( global, instance )
 {
 
-  association _History { create; }
+  // asocia a la tabla hija History, se permite añadir registros en la tabla de History dependiendo del padre
+  // se activa el draft "borrador"
+  association _History { create ( features : instance ); with draft; }
 
   create ( authorization : global );
   update;
   delete;
+
+  // se le asigna un valor automatico incrmental en el IncUuid por cada registro creado
+  field ( numbering : managed, readonly ) IncUuid;
 
   //campos obligatorio al crear un registro
   field ( mandatory )
@@ -26,9 +31,8 @@ authorization master ( global, instance )
 
   //campos de solo lectura
   field ( readonly )
-  IncUuid,
   IncidentId,
-  status,
+  CreationDate,
   ChangedDate,
   LocalCreatedBy,
   LocalCreatedAt,
@@ -36,9 +40,26 @@ authorization master ( global, instance )
   LocalLastChangedAt,
   LastChangedAt;
 
-  //boton de accion ChangeStatus: le cambia el status al registro que estamos visualizando en ese momento
+  //boton de accion ChangeStatus: cambia el status al registro que estamos visualizando en ese momento
   action ( features : instance, authorization : update ) ChangeStatus parameter z_a_ChangeStatus_088 result [1] $self;
 
+
+  // se asigna un nº secuencial al IncidentId, Status= 'OP' y CreationData informado  al crear un registro
+  determination default_values on modify { create; }
+
+  // se crea un nuevo registro en la tabla History al mísmo momento que se crea una regsitro para la tabla Incident
+  determination new_record_history on save { create; }
+
+  // acción interna que será llamada por la determinación new_record_history
+  internal action new_record;
+
+
+
+  /// actualiza todo el registro entero
+  side effects
+  {
+    action ChangeStatus affects $self;
+  }
 
   draft action Resume;
   draft action Activate optimized;
@@ -82,13 +103,15 @@ etag master LocalLastChangedAt
 
 {
 
-
   association _Incident;
 
   update;
   delete;
+
+  // se le asigna un valor automatico en el HisUuid
+  field ( numbering : managed, readonly ) HisUuid;
+
   field ( readonly )
-  HisUuid,
   IncUuid,
   HisId,
   LocalCreatedBy,
@@ -96,8 +119,6 @@ etag master LocalLastChangedAt
   LocalLastChangedBy,
   LocalLastChangedAt,
   LastChangedAt;
-
-
 
 
   mapping for zdt_inct_h_088
