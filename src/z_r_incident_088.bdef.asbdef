@@ -12,28 +12,30 @@ etag master LocalLastChangedAt
 authorization master ( global, instance )
 {
 
-  // asocia a la tabla hija History, se permite añadir registros en la tabla de History dependiendo del padre
-  // se activa el draft "borrador"
-  association _History { create ( features : instance ); with draft; }
-
   create ( authorization : global );
   update;
   delete;
 
+  // asocia a la tabla hija History, se permite añadir registros en la tabla de History dependiendo del padre
+  // se activa el draft "borrador"
+  association _History { create ( features : instance ); with draft; }
+
+
   // se le asigna un valor automatico incrmental en el IncUuid por cada registro creado
   field ( numbering : managed, readonly ) IncUuid;
 
-  //campos obligatorio al crear un registro
+  //se activa que los campos sean obligatorios al crear o editar un registro
   field ( mandatory )
   title,
   description,
-  priority;
+  priority,
+  Status;
+
 
   //campos de solo lectura
   field ( readonly )
   IncidentId,
   CreationDate,
-  ChangedDate,
   LocalCreatedBy,
   LocalCreatedAt,
   LocalLastChangedBy,
@@ -43,15 +45,21 @@ authorization master ( global, instance )
   //boton de accion ChangeStatus: cambia el status al registro que estamos visualizando en ese momento
   action ( features : instance, authorization : update ) ChangeStatus parameter z_a_ChangeStatus_088 result [1] $self;
 
+  // acción interna que será llamada por la determinación new_record_history para crear el regsitro en la History
+  internal action new_record;
 
-  // se asigna un nº secuencial al IncidentId, Status= 'OP' y CreationData informado  al crear un registro
+  // validación de  campos obligatorios al crear como editar un registro y que muestre mensaje de error
+  validation validate_required_fields on save { create; update; field Title, Description, Priority, Status, CreationDate; }
+
+  //  validación que changedDate no sea en una fecha anterior que el CreationDate
+  validation validate_range_dates on save { create; update; field CreationDate, ChangedDate; }
+
+  // se asigna un nº secuencial al IncidentId, Status= 'OP' y CreationDate al crear un registro
   determination default_values on modify { create; }
 
   // se crea un nuevo registro en la tabla History al mísmo momento que se crea una regsitro para la tabla Incident
   determination new_record_history on save { create; }
 
-  // acción interna que será llamada por la determinación new_record_history
-  internal action new_record;
 
 
 
@@ -68,7 +76,8 @@ authorization master ( global, instance )
 
   draft determine action Prepare
   {
-
+    validation validate_required_fields;
+    validation validate_range_dates;
   }
 
   mapping for zdt_inct_088
@@ -103,17 +112,16 @@ etag master LocalLastChangedAt
 
 {
 
-  association _Incident;
-
   update;
   delete;
+
+  association _Incident;
 
   // se le asigna un valor automatico en el HisUuid
   field ( numbering : managed, readonly ) HisUuid;
 
   field ( readonly )
   IncUuid,
-  HisId,
   LocalCreatedBy,
   LocalCreatedAt,
   LocalLastChangedBy,
