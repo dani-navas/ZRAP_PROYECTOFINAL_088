@@ -1,6 +1,16 @@
 CLASS lhc_Incident DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
 
+    CONSTANTS: BEGIN OF c_status,
+                 open       TYPE zde_status_088 VALUE 'OP',
+                 inprogress TYPE zde_status_088 VALUE 'IP',
+                 pending    TYPE zde_status_088 VALUE 'PE',
+                 completed  TYPE zde_status_088 VALUE 'CO',
+                 closed     TYPE zde_status_088 VALUE 'CL',
+                 canceled   TYPE zde_status_088 VALUE 'CN',
+               END OF c_status.
+
+
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       keys REQUEST requested_authorizations FOR Incident RESULT result.
 
@@ -13,8 +23,8 @@ CLASS lhc_Incident DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS ChangeStatus FOR MODIFY
        keys FOR ACTION Incident~ChangeStatus RESULT result.
 
-    METHODS default_values FOR DETERMINE ON MODIFY
-       keys FOR Incident~default_values.
+    METHODS set_inital_values FOR DETERMINE ON MODIFY
+       keys FOR Incident~set_inital_values.
 
     METHODS new_record_history FOR DETERMINE ON SAVE
        keys FOR Incident~new_record_history.
@@ -27,6 +37,8 @@ CLASS lhc_Incident DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS validate_range_dates FOR VALIDATE ON SAVE
        keys FOR Incident~validate_range_dates.
+    METHODS validate_change_status FOR VALIDATE ON SAVE
+       keys FOR Incident~validate_change_status.
 
 ENDCLASS.
 
@@ -47,19 +59,160 @@ CLASS lhc_Incident IMPLEMENTATION.
     ALL FIELDS WITH CORRESPONDING #( keys )
     RESULT DATA(incidents).
 
-    result = VALUE #( FOR ls_incident IN incidents (
-                                     %tky = ls_incident-%tky
-                                     %action-ChangeStatus = COND #( WHEN ls_incident-%is_draft = if_abap_behv=>mk-on
-                                                                 THEN if_abap_behv=>fc-o-disabled
-                                                                 ELSE if_abap_behv=>fc-o-enabled )
-                                                                  ) ).
+    result = VALUE #( FOR ls_incident IN incidents ( %tky = ls_incident-%tky
+                                                     %action-ChangeStatus = COND #( WHEN ls_incident-%is_draft = if_abap_behv=>mk-on
+                                                                                    THEN if_abap_behv=>fc-o-disabled
+                                                                                    ELSE if_abap_behv=>fc-o-enabled  )
+
+*                                                    %assoc-_History = COND #( WHEN ls_incident-status = c_status-completed OR
+*                                                                                   ls_incident-status = c_status-closed    OR
+*                                                                                   ls_incident-status = c_status-canceled
+*                                                                                  THEN  if_abap_behv=>fc-o-disabled
+*                                                                                  ELSE  if_abap_behv=>fc-o-enabled )
+                                                                                      )  ).
 
   ENDMETHOD.
+
+
+
+
 
   METHOD ChangeStatus.
+
+    DATA l_error TYPE abap_boolean.
+
+    DATA lt_update_incidents TYPE TABLE FOR UPDATE z_r_incident_088.
+    DATA lt_create_history   TYPE TABLE FOR CREATE z_r_incident_088\_History.
+
+*Lectura de la entidad y obtenemos todos los campos de la entidad z_r_incident_088
+*se guardan los datos en la tabla interna incident
+    READ ENTITIES OF z_r_incident_088
+    IN LOCAL MODE ENTITY Incident
+    ALL FIELDS WITH CORRESPONDING #( keys )
+    RESULT DATA(incidents).
+
+    CHECK incidents IS NOT INITIAL.
+
+    LOOP AT incidents ASSIGNING FIELD-SYMBOL(<fs_incidents>).
+
+*obtenemos los datos de los parámetros del del boton ChangeStatus
+      DATA(l_newstatus)  = keys[ KEY id %tky = <fs_incidents>-%tky ]-%param-Status.
+      DATA(l_observation) = keys[ KEY id %tky = <fs_incidents>-%tky ]-%param-description.
+
+*Status actual antes de cambiarlo
+      DATA(l_oldstatus)  =  <fs_incidents>-Status.
+
+*No se puede cambiar un incidente a Completed (CO) o Closed (CL) si aún está en Pending (PE)
+      IF <fs_incidents>-Status = c_status-pending AND ( l_newstatus = c_status-completed OR
+                                                        l_newstatus = c_status-closed ) .
+
+        APPEND  VALUE #( %tky = <fs_incidents>-%tky ) TO failed-incident.
+        APPEND VALUE #( %tky        = <fs_incidents>-%tky
+                        %state_area = 'VALIDATE_STATUS'
+                        %msg        = NEW zcl_message_incident_088( textid   = zcl_message_incident_088=>validate_status_pe
+                                                                    severity = if_abap_behv_message=>severity-error )
+                        %op-%action-ChangeStatus = if_abap_behv=>mk-on
+                           ) TO reported-incident.
+        l_error = abap_true.
+      ENDIF.
+
+*Para un incidente con estatus Canceled (CN), Completed (CO) o Closed (CL), ya no es posible cambiar el estatus
+      IF <fs_incidents>-Status = c_status-canceled   OR
+         <fs_incidents>-Status = c_status-completed  OR
+         <fs_incidents>-Status = c_status-closed.
+        APPEND  VALUE #( %tky = <fs_incidents>-%tky ) TO failed-incident.
+        APPEND VALUE #( %tky        = <fs_incidents>-%tky
+                        %state_area = 'VALIDATE_STATUS'
+                        %msg        = NEW zcl_message_incident_088( textid   = zcl_message_incident_088=>validate_status_co_cl_ca
+                                                                    severity = if_abap_behv_message=>severity-error )
+                        %op-%action-ChangeStatus = if_abap_behv=>mk-on
+                           ) TO reported-incident.
+        l_error = abap_true.
+      ENDIF.
+
+*Si el estado cambia a In Progress (IP), debe asignarse un RESPONSABLE
+*Solo el usuario asignado o un administrador pueden cambiar el estado de un incidente.
+      DATA(l_user_responsable) = cl_abap_context_info=>get_user_technical_name( ).
+
+      IF <fs_incidents>-Status = c_status-inprogress  AND l_user_responsable <> 'CB9980000088'.
+        APPEND  VALUE #( %tky = <fs_incidents>-%tky ) TO failed-incident.
+        APPEND VALUE #( %tky        = <fs_incidents>-%tky
+                        %state_area = 'VALIDATE_STATUS'
+                        %msg        = NEW zcl_message_incident_088( textid   = zcl_message_incident_088=>validate_user
+                                                                    user     = l_user_responsable
+                                                                    severity = if_abap_behv_message=>severity-error )
+                        %op-%action-ChangeStatus = if_abap_behv=>mk-on
+                           ) TO reported-incident.
+        l_error = abap_true.
+      ENDIF.
+
+      CHECK l_error = abap_false.
+
+      APPEND VALUE #( %tky   = <fs_incidents>-%tky
+                      status = l_newstatus
+                      changedDate = cl_abap_context_info=>get_system_date( )   ) TO lt_update_incidents.
+
+
+*Obtenemos de la tabla de BBDD el HisId con el valor mayor es decir el último valor guardado,
+*teniendo en cuenta que tiene que ser del mísmo IncUuid
+      SELECT SINGLE FROM zdt_inct_h_088
+      FIELDS MAX( his_id )
+      WHERE inc_uuid = @<fs_incidents>-IncUuid AND
+            his_id IS NOT INITIAL
+      INTO @DATA(l_his_id).
+
+*se rellena la tabla interna con los nuevos datos
+      TRY.
+          APPEND VALUE #( %tky = <fs_incidents>-%tky
+                          %target = VALUE #( ( hisuuid = cl_system_uuid=>create_uuid_x16_static( )
+                                               incuuid = <fs_incidents>-incuuid
+                                               hisid = l_his_id + 1
+                                               PreviousStatus = l_oldstatus
+                                               newstatus = l_newstatus
+                                               text = l_observation  ) )
+                                               )
+                                              TO lt_create_history.
+        CATCH cx_uuid_error.
+          "handle exception
+      ENDTRY.
+    ENDLOOP.
+
+    MODIFY ENTITIES OF z_r_incident_088
+    IN LOCAL MODE ENTITY Incident
+    UPDATE FIELDS
+    ( status
+      ChangedDate   )
+    WITH lt_update_incidents.
+
+
+    MODIFY ENTITIES OF z_r_incident_088
+    IN LOCAL MODE ENTITY Incident
+    CREATE BY \_History
+    FIELDS ( HisUuid
+             IncUuid
+             HisId
+             PreviousStatus
+             NewStatus
+             Text )
+    AUTO FILL CID
+    WITH lt_creatE_history
+    MAPPED mapped.
+
+
+
+    READ ENTITIES OF z_r_incident_088
+    IN LOCAL MODE ENTITY Incident
+    ALL FIELDS WITH CORRESPONDING #( keys )
+    RESULT DATA(lt_incidents).
+
+    result = VALUE #( FOR ls_Incident IN lt_incidents ( %tky   = ls_incident-%tky
+                                                        %param = ls_incident             ) ).
+
+
+
   ENDMETHOD.
 
-  METHOD default_values.
+  METHOD set_inital_values.
 
 *Lectura de la entidad y obtenemos todos los campos de la entidad z_r_incident_088
 *se guardan los datos en la tabla interna incident
@@ -147,7 +300,7 @@ CLASS lhc_Incident IMPLEMENTATION.
     ENDLOOP.
 
 
-*Se el registro en la tabla History
+*Se inserta el registro en la tabla History
     MODIFY ENTITIES OF z_r_incident_088
    IN LOCAL MODE ENTITY Incident
    CREATE BY \_History
@@ -175,6 +328,15 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     LOOP AT incidents INTO DATA(ls_incident).
 
+      IF ls_incident-IncidentId IS INITIAL.
+        APPEND  VALUE #( %tky = ls_incident-%tky ) TO failed-incident.
+        APPEND VALUE #( %tky        = ls_incident-%tky
+                        %state_area = 'VALIDATE_REQUEST'
+                        %msg        = NEW zcl_message_incident_088( textid   = zcl_message_incident_088=>incidentid
+                                                                    severity = if_abap_behv_message=>severity-error )
+                        %element-IncidentId = if_abap_behv=>mk-on
+                           ) TO reported-incident.
+      ENDIF.
       IF ls_incident-Title IS INITIAL.
         APPEND  VALUE #( %tky = ls_incident-%tky ) TO failed-incident.
         APPEND VALUE #( %tky        = ls_incident-%tky
@@ -242,6 +404,33 @@ CLASS lhc_Incident IMPLEMENTATION.
                         ) TO reported-incident.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+  METHOD validate_change_status.
+
+    READ ENTITIES OF z_r_incident_088
+    IN LOCAL MODE ENTITY Incident
+    ALL FIELDS WITH CORRESPONDING #( keys )
+    RESULT DATA(incidents).
+
+    LOOP AT incidents INTO DATA(ls_incidents).
+
+*Si el estado cambia a In Progress (ip), debe asignarse un responsable
+*Solo el usuario asignado o un administrador pueden cambiar el estado de un incidente.
+      DATA(l_user_responsable) = cl_abap_context_info=>get_user_technical_name( ).
+
+      IF ls_incidents-Status = c_status-inprogress  AND l_user_responsable <> 'CB9980000088'.
+        APPEND  VALUE #( %tky = ls_incidents-%tky  )  TO failed-incident.
+        APPEND VALUE #( %tky        = ls_incidents-%tky
+                        %state_area = 'VALIDATE_STATUS'
+                        %msg        = NEW zcl_message_incident_088( textid   = zcl_message_incident_088=>validate_user
+                                                                    user     = l_user_responsable
+                                                                    severity = if_abap_behv_message=>severity-error )
+                        %element-Status = if_abap_behv=>mk-on
+                           ) TO reported-incident.
+      ENDIF.
+    ENDLOOP.
+
   ENDMETHOD.
 
 ENDCLASS.

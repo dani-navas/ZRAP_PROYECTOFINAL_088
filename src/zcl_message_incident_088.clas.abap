@@ -55,8 +55,43 @@ CLASS zcl_message_incident_088 DEFINITION
         attr2 TYPE scx_attrname VALUE 'MV_CREATE_DATE',
         attr3 TYPE scx_attrname VALUE '',
         attr4 TYPE scx_attrname VALUE '',
-      END OF createdate_changeddate.
+      END OF createdate_changeddate,
 
+      BEGIN OF incidentid,
+        msgid TYPE symsgid VALUE 'ZMC_INCIDENT_088',
+        msgno TYPE symsgno VALUE '006',
+        attr1 TYPE scx_attrname VALUE '',
+        attr2 TYPE scx_attrname VALUE '',
+        attr3 TYPE scx_attrname VALUE '',
+        attr4 TYPE scx_attrname VALUE '',
+      END OF incidentid,
+
+      BEGIN OF validate_status_pe,
+        msgid TYPE symsgid VALUE 'ZMC_INCIDENT_088',
+        msgno TYPE symsgno VALUE '007',
+        attr1 TYPE scx_attrname VALUE 'MV_NEWSTATUS',
+        attr2 TYPE scx_attrname VALUE 'MV_OLDSTATUS',
+        attr3 TYPE scx_attrname VALUE '',
+        attr4 TYPE scx_attrname VALUE '',
+      END OF validate_status_pe,
+
+      BEGIN OF validate_status_co_cl_ca,
+        msgid TYPE symsgid VALUE 'ZMC_INCIDENT_088',
+        msgno TYPE symsgno VALUE '008',
+        attr1 TYPE scx_attrname VALUE 'MV_NEWSTATUS',
+        attr2 TYPE scx_attrname VALUE 'MV_OLDSTATUS',
+        attr3 TYPE scx_attrname VALUE '',
+        attr4 TYPE scx_attrname VALUE '',
+      END OF validate_status_co_cl_ca,
+
+      BEGIN OF validate_user,
+        msgid TYPE symsgid VALUE 'ZMC_INCIDENT_088',
+        msgno TYPE symsgno VALUE '009',
+        attr1 TYPE scx_attrname VALUE 'MV_USER',
+        attr2 TYPE scx_attrname VALUE '',
+        attr3 TYPE scx_attrname VALUE '',
+        attr4 TYPE scx_attrname VALUE '',
+      END OF validate_user.
 
     METHODS constructor
       IMPORTING
@@ -77,13 +112,16 @@ CLASS zcl_message_incident_088 DEFINITION
         begin_date            TYPE /dmo/begin_date OPTIONAL
         changed_date          TYPE /dmo/begin_date OPTIONAL
         create_date           TYPE /dmo/begin_date OPTIONAL
+        newstatus             TYPE zde_status_088 OPTIONAL
+        oldstatus             TYPE zde_status_088 OPTIONAL
         end_date              TYPE /dmo/end_date OPTIONAL
         booking_date          TYPE /dmo/booking_date OPTIONAL
         flight_date           TYPE /dmo/flight_date OPTIONAL
         status                TYPE /dmo/travel_status OPTIONAL
         currency_code         TYPE /dmo/currency_code OPTIONAL
         severity              TYPE if_abap_behv_message=>t_severity OPTIONAL
-        uname                 TYPE syuname OPTIONAL.
+        uname                 TYPE syuname OPTIONAL
+        user                  TYPE string OPTIONAL.
 
 
     DATA:
@@ -103,11 +141,14 @@ CLASS zcl_message_incident_088 DEFINITION
       mv_CHANGED_DATE          TYPE /dmo/begin_date,
       mv_CREATE_DATE           TYPE /dmo/begin_date,
       mv_end_date              TYPE /dmo/end_date,
+      MV_newstatus             TYPE zde_status_088,
+      MV_oldstatus             TYPE zde_status_088,
       mv_booking_date          TYPE /dmo/booking_date,
       mv_flight_date           TYPE /dmo/flight_date,
       mv_status                TYPE /dmo/travel_status,
       mv_currency_code         TYPE /dmo/currency_code,
-      mv_uname                 TYPE syuname.
+      mv_uname                 TYPE syuname,
+      mv_user                  TYPE string.
 
 
   PROTECTED SECTION.
@@ -135,14 +176,17 @@ CLASS zcl_message_incident_088 IMPLEMENTATION.
     me->mv_connection_id         = connection_id.
     me->mv_supplement_id         = supplement_id.
     me->mv_begin_date            = begin_date.
-    me->mv_changed_date            = changed_date.
+    me->mv_changed_date          = changed_date.
     me->mv_create_date           = create_date.
+    me->mv_newstatus             = newstatus.
+    me->mv_oldstatus             = oldstatus.
     me->mv_end_date              = end_date.
     me->mv_booking_date          = booking_date.
     me->mv_flight_date           = flight_date.
     me->mv_status                = status.
     me->mv_currency_code         = currency_code.
     me->mv_uname                 = uname.
+    me->mv_user                  = user.
 
 
     if_abap_behv_message~m_severity = severity.

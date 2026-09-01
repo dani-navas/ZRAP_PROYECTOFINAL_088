@@ -54,21 +54,24 @@ authorization master ( global, instance )
   //  validación que changedDate no sea en una fecha anterior que el CreationDate
   validation validate_range_dates on save { create; update; field CreationDate, ChangedDate; }
 
+//  validación del dato del status al guardar
+  validation validate_change_status on save { field status; }
+
   // se asigna un nº secuencial al IncidentId, Status= 'OP' y CreationDate al crear un registro
-  determination default_values on modify { create; }
+  determination set_inital_values on modify { create; }
 
   // se crea un nuevo registro en la tabla History al mísmo momento que se crea una regsitro para la tabla Incident
   determination new_record_history on save { create; }
 
 
-
-
-  /// actualiza todo el registro entero
+  /// refresca la parte fiori front-end
   side effects
   {
-    action ChangeStatus affects $self;
+    action ChangeStatus affects entity _History;
   }
 
+//  side effects { action ChangeStatus affects $self; }
+//
   draft action Resume;
   draft action Activate optimized;
   draft action Discard;
@@ -122,6 +125,9 @@ etag master LocalLastChangedAt
 
   field ( readonly )
   IncUuid,
+  PreviousStatus,
+  NewStatus,
+  Text,
   LocalCreatedBy,
   LocalCreatedAt,
   LocalLastChangedBy,

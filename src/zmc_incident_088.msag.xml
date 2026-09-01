@@ -38,6 +38,30 @@
      <MSGNR>005</MSGNR>
      <TEXT>El Change Date &amp;1 no puede ser anterior a Creation Date &amp;2</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_088</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>El Incident Id es un campo obligatorio</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_088</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>El Status Pending(PE) no se puede cambiar a Completed(CO) o Closed(CL)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_088</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>Los Status Completed(CO),  Closed(CL) o Canceled(CN) no se pueden modicar</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_088</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>El usuario &amp;1 no esta autorizado para cambiar el Status</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

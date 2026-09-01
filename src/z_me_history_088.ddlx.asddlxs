@@ -5,7 +5,8 @@
         deleteHidden: true,// desactvian los botones standard
         headerInfo: {   typeName: 'Incident', typeNamePlural: 'History',
         title:      {   type: #STANDARD, value: 'HisId'  }  },
-        presentationVariant: [{sortOrder: [{by: 'HisId', direction: #ASC }],
+        presentationVariant: [{// qualifier: 'HistorySort', 
+                                sortOrder: [{by:   'HisId', direction: #ASC }], 
         visualizations: [{ type:  #AS_LINEITEM }] }] }
 annotate entity Z_c_history_088 with
 {
@@ -27,10 +28,14 @@ annotate entity Z_c_history_088 with
   @UI.identification: [{position: 30,   label: 'History Id' }]
   HisId;
 
+//  @Consumption.valueHelpDefinition: [{ entity: { name: 'z_r_status_088', element: 'StatusCode' }, useForValidation: true }]
+//  @UI.textArrangement: #TEXT_LAST
   @UI.lineItem: [{ position:40, importance: #LOW, label: 'Previous Status' }]
   @UI.identification: [{position: 40,   label: 'Previous Status' }]
   PreviousStatus;
 
+//  @Consumption.valueHelpDefinition: [{ entity: { name: 'z_r_status_088', element: 'StatusCode' }, useForValidation: true }]
+//  @UI.textArrangement: #TEXT_LAST
   @UI.lineItem: [{ position:50, importance: #LOW, label: 'Incident Status' }]
   @UI.identification: [{position: 50 , label: 'New Status'  }]
   NewStatus;
