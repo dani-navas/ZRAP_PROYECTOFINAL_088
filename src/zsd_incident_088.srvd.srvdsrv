@@ -1,5 +1,6 @@
 @EndUserText.label: 'Serivce Definition Incident'
-define service ZSD_INCIDENT_088 {
+define service ZSD_INCIDENT_088
+  provider contracts odata_v4_ui {
   expose Z_c_INCIDENT_088 as Incident;
   expose Z_c_history_088  as History;
   expose z_r_status_088   as StatusVH;

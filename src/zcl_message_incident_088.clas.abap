@@ -84,14 +84,23 @@ CLASS zcl_message_incident_088 DEFINITION
         attr4 TYPE scx_attrname VALUE '',
       END OF validate_status_co_cl_ca,
 
-      BEGIN OF validate_user,
+      BEGIN OF validate_USER,
         msgid TYPE symsgid VALUE 'ZMC_INCIDENT_088',
         msgno TYPE symsgno VALUE '009',
         attr1 TYPE scx_attrname VALUE 'MV_USER',
         attr2 TYPE scx_attrname VALUE '',
         attr3 TYPE scx_attrname VALUE '',
         attr4 TYPE scx_attrname VALUE '',
-      END OF validate_user.
+      END OF validate_USER,
+
+      BEGIN OF validate_status_op_delete,
+        msgid TYPE symsgid VALUE 'ZMC_INCIDENT_088',
+        msgno TYPE symsgno VALUE '010',
+        attr1 TYPE scx_attrname VALUE '',
+        attr2 TYPE scx_attrname VALUE '',
+        attr3 TYPE scx_attrname VALUE '',
+        attr4 TYPE scx_attrname VALUE '',
+      END OF validate_status_op_delete.
 
     METHODS constructor
       IMPORTING

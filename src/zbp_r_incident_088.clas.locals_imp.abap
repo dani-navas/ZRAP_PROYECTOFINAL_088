@@ -37,8 +37,12 @@ CLASS lhc_Incident DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS validate_range_dates FOR VALIDATE ON SAVE
        keys FOR Incident~validate_range_dates.
+
     METHODS validate_change_status FOR VALIDATE ON SAVE
        keys FOR Incident~validate_change_status.
+
+    METHODS validate_status_op FOR VALIDATE ON SAVE
+       keys FOR Incident~validate_status_op.
 
 ENDCLASS.
 
@@ -64,7 +68,7 @@ CLASS lhc_Incident IMPLEMENTATION.
                                                                                     THEN if_abap_behv=>fc-o-disabled
                                                                                     ELSE if_abap_behv=>fc-o-enabled  )
 
-*                                                    %assoc-_History = COND #( WHEN ls_incident-status = c_status-completed OR
+*                                                    % = COND #( WHEN ls_incident-status = c_status-completed OR
 *                                                                                   ls_incident-status = c_status-closed    OR
 *                                                                                   ls_incident-status = c_status-canceled
 *                                                                                  THEN  if_abap_behv=>fc-o-disabled
@@ -74,10 +78,7 @@ CLASS lhc_Incident IMPLEMENTATION.
   ENDMETHOD.
 
 
-
-
-
-  METHOD ChangeStatus.
+ METHOD ChangeStatus.
 
     DATA l_error TYPE abap_boolean.
 
@@ -169,7 +170,8 @@ CLASS lhc_Incident IMPLEMENTATION.
                                                hisid = l_his_id + 1
                                                PreviousStatus = l_oldstatus
                                                newstatus = l_newstatus
-                                               text = l_observation  ) )
+                                               text = l_observation
+                                               ) )
                                                )
                                               TO lt_create_history.
         CATCH cx_uuid_error.
@@ -178,11 +180,11 @@ CLASS lhc_Incident IMPLEMENTATION.
     ENDLOOP.
 
     MODIFY ENTITIES OF z_r_incident_088
-    IN LOCAL MODE ENTITY Incident
-    UPDATE FIELDS
-    ( status
-      ChangedDate   )
-    WITH lt_update_incidents.
+   IN LOCAL MODE ENTITY Incident
+   UPDATE FIELDS
+   ( status
+     ChangedDate   )
+   WITH lt_update_incidents.
 
 
     MODIFY ENTITIES OF z_r_incident_088
@@ -199,7 +201,6 @@ CLASS lhc_Incident IMPLEMENTATION.
     MAPPED mapped.
 
 
-
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
@@ -207,7 +208,6 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     result = VALUE #( FOR ls_Incident IN lt_incidents ( %tky   = ls_incident-%tky
                                                         %param = ls_incident             ) ).
-
 
 
   ENDMETHOD.
@@ -256,7 +256,6 @@ CLASS lhc_Incident IMPLEMENTATION.
     ENTITY Incident
     EXECUTE new_record
     FROM CORRESPONDING #( keys ).
-
   ENDMETHOD.
 
 
@@ -406,6 +405,7 @@ CLASS lhc_Incident IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
+
   METHOD validate_change_status.
 
     READ ENTITIES OF z_r_incident_088
@@ -415,7 +415,7 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     LOOP AT incidents INTO DATA(ls_incidents).
 
-*Si el estado cambia a In Progress (ip), debe asignarse un responsable
+*Si el estado cambia a In Progress (IP), debe asignarse un responsable
 *Solo el usuario asignado o un administrador pueden cambiar el estado de un incidente.
       DATA(l_user_responsable) = cl_abap_context_info=>get_user_technical_name( ).
 
@@ -430,7 +430,36 @@ CLASS lhc_Incident IMPLEMENTATION.
                            ) TO reported-incident.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
 
+
+METHOD validate_status_op.
+
+    CHECK keys IS NOT INITIAL.
+
+*Con la tabla de validación KEYS se obtiene de la BBDD el registro que se quiere eliminar
+* mediante el InncUuid(UUID clave única por registro)
+    SELECT inc_uuid, status
+        FROM zdt_inct_088
+        FOR ALL ENTRIES IN @keys
+        WHERE inc_uuid = @keys-IncUuid
+        INTO TABLE @DATA(lt_db_incidents).
+
+    LOOP AT lt_db_incidents INTO DATA(ls_db_incident).
+
+*Se comprueba que tenga el STATUS = 'OP' (Abierto) si es así se va a buscar mediante el UUID para obtener el %TKY
+*para mostrar el mensaje de error y bloquear la acción
+      IF ls_db_incident-status = c_status-open.
+        READ TABLE keys INTO DATA(ls_key) WITH KEY IncUuid = ls_db_incident-inc_uuid.
+        IF sy-subrc = 0.
+          APPEND VALUE #( %tky = ls_key-%tky ) TO failed-incident.
+          APPEND VALUE #( %tky = ls_key-%tky
+                          %msg = NEW zcl_message_incident_088( textid   = zcl_message_incident_088=>validate_status_op_delete
+                                                               severity = if_abap_behv_message=>severity-error  )
+                        ) TO reported-incident.
+        ENDIF.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 ENDCLASS.

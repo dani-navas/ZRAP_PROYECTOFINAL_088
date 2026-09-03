@@ -9,13 +9,14 @@ define behavior for Z_c_INCIDENT_088 alias Incident
   use delete;
 
   use action ChangeStatus;
+
   use action Resume;
   use action Activate;
   use action Discard;
   use action Edit;
   use action Prepare;
 
-  use association _History { create; }
+  use association _History { create; with draft; }
 }
 
 define behavior for Z_c_history_088 alias History

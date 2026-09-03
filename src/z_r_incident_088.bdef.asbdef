@@ -16,10 +16,9 @@ authorization master ( global, instance )
   update;
   delete;
 
-  // asocia a la tabla hija History, se permite añadir registros en la tabla de History dependiendo del padre
+  // se asocia a la vista  History y se permite crear registros dependiendo de la vista padre(Incident)
   // se activa el draft "borrador"
   association _History { create ( features : instance ); with draft; }
-
 
   // se le asigna un valor automatico incrmental en el IncUuid por cada registro creado
   field ( numbering : managed, readonly ) IncUuid;
@@ -31,8 +30,7 @@ authorization master ( global, instance )
   priority,
   Status;
 
-
-  //campos de solo lectura
+  //campos solo lectura
   field ( readonly )
   IncidentId,
   CreationDate,
@@ -42,36 +40,50 @@ authorization master ( global, instance )
   LocalLastChangedAt,
   LastChangedAt;
 
-  //boton de accion ChangeStatus: cambia el status al registro que estamos visualizando en ese momento
+
+
+  //  ****** ACCIONES ******
+
+  //boton de accion ChangeStatus: cambia el status de la instancia que estamos visualizando en el detalle
   action ( features : instance, authorization : update ) ChangeStatus parameter z_a_ChangeStatus_088 result [1] $self;
 
-  // acción interna que será llamada por la determinación new_record_history para crear el regsitro en la History
+  // acción interna que será llamada por la determinación new_record_history para crear un regsitro a la vista History
   internal action new_record;
 
-  // validación de  campos obligatorios al crear como editar un registro y que muestre mensaje de error
+
+
+
+  //  ****** VALIDACIONES ******
+
+  // validar campos obligatorios al crear o editar un registro y que muestre mensaje de error
   validation validate_required_fields on save { create; update; field Title, Description, Priority, Status, CreationDate; }
 
-  //  validación que changedDate no sea en una fecha anterior que el CreationDate
+  // validar que el campo ChangedDate no sea en una fecha anterior que el CreationDate
   validation validate_range_dates on save { create; update; field CreationDate, ChangedDate; }
 
-//  validación del dato del status al guardar
+  // validaciór el Status al guardar
+  // Si el estado cambia a In Progress (IP), debe asignarse un responsable
+  // Solo el usuario asignado o un administrador pueden cambiar el estado de un incidente.
   validation validate_change_status on save { field status; }
+
+  // validar el boton "Delete" la incidencia si esta en Status= 'OP' no se podrá eliminar
+  validation validate_status_op on save { delete; }
+
+
+
+
+  //  ****** DETERMINACIONES ******
 
   // se asigna un nº secuencial al IncidentId, Status= 'OP' y CreationDate al crear un registro
   determination set_inital_values on modify { create; }
 
-  // se crea un nuevo registro en la tabla History al mísmo momento que se crea una regsitro para la tabla Incident
+  // se crea un nuevo registro a la vista History en el mísmo momento que se crea un registro a la vista Incident
+  // llama a la acción (new_record) para se crear un registro nuevo a la BBDD de History
   determination new_record_history on save { create; }
 
 
-  /// refresca la parte fiori front-end
-  side effects
-  {
-    action ChangeStatus affects entity _History;
-  }
+  side effects { action ChangeStatus affects entity _History; }
 
-//  side effects { action ChangeStatus affects $self; }
-//
   draft action Resume;
   draft action Activate optimized;
   draft action Discard;
@@ -81,6 +93,8 @@ authorization master ( global, instance )
   {
     validation validate_required_fields;
     validation validate_range_dates;
+    validation validate_change_status;
+    validation validate_status_op;
   }
 
   mapping for zdt_inct_088
