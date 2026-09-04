@@ -46,6 +46,9 @@ CLASS lhc_Incident DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
 ENDCLASS.
 
+
+
+
 CLASS lhc_Incident IMPLEMENTATION.
 
   METHOD get_instance_authorizations.
@@ -54,28 +57,27 @@ CLASS lhc_Incident IMPLEMENTATION.
   METHOD get_global_authorizations.
   ENDMETHOD.
 
+
+
   METHOD get_instance_features.
 
-*Lectura de la entidad y obtenemos todos los campos de la entidad z_r_incident_088
-*se guardan los datos en la tabla interna incident
+*Lectura de todos los campos de la vista Incident
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
     RESULT DATA(incidents).
 
+*Dentro del detalle de una Incidencia y se le da al boton "Editar" desactivo el boton ChangeStatus,
+*ya que en el modo "Editar" se tiene la opción de cambiar el campo Status
     result = VALUE #( FOR ls_incident IN incidents ( %tky = ls_incident-%tky
                                                      %action-ChangeStatus = COND #( WHEN ls_incident-%is_draft = if_abap_behv=>mk-on
                                                                                     THEN if_abap_behv=>fc-o-disabled
                                                                                     ELSE if_abap_behv=>fc-o-enabled  )
-
-*                                                    % = COND #( WHEN ls_incident-status = c_status-completed OR
-*                                                                                   ls_incident-status = c_status-closed    OR
-*                                                                                   ls_incident-status = c_status-canceled
-*                                                                                  THEN  if_abap_behv=>fc-o-disabled
-*                                                                                  ELSE  if_abap_behv=>fc-o-enabled )
                                                                                       )  ).
-
   ENDMETHOD.
+
+
+
 
 
  METHOD ChangeStatus.
@@ -85,8 +87,7 @@ CLASS lhc_Incident IMPLEMENTATION.
     DATA lt_update_incidents TYPE TABLE FOR UPDATE z_r_incident_088.
     DATA lt_create_history   TYPE TABLE FOR CREATE z_r_incident_088\_History.
 
-*Lectura de la entidad y obtenemos todos los campos de la entidad z_r_incident_088
-*se guardan los datos en la tabla interna incident
+*Lectura de todos los campos de la vista Incident
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
@@ -96,14 +97,15 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     LOOP AT incidents ASSIGNING FIELD-SYMBOL(<fs_incidents>).
 
-*obtenemos los datos de los parámetros del del boton ChangeStatus
-      DATA(l_newstatus)  = keys[ KEY id %tky = <fs_incidents>-%tky ]-%param-Status.
+*Se obtiene los valores de los parámetros(Status,Observación) de la vista que abre el boton ChangeStatus
+      DATA(l_newstatus)   = keys[ KEY id %tky = <fs_incidents>-%tky ]-%param-Status.
       DATA(l_observation) = keys[ KEY id %tky = <fs_incidents>-%tky ]-%param-description.
 
-*Status actual antes de cambiarlo
+*Status actual antes de cambiar el valor por el Status se se ha informado por parámetro
       DATA(l_oldstatus)  =  <fs_incidents>-Status.
 
-*No se puede cambiar un incidente a Completed (CO) o Closed (CL) si aún está en Pending (PE)
+*No se puede cambiar un incidente a Completed(CO) o Closed(CL) si todavía está en In Pending(PE)
+*En caso de cumplirse la condición se lanza un mensaje de error
       IF <fs_incidents>-Status = c_status-pending AND ( l_newstatus = c_status-completed OR
                                                         l_newstatus = c_status-closed ) .
 
@@ -117,7 +119,8 @@ CLASS lhc_Incident IMPLEMENTATION.
         l_error = abap_true.
       ENDIF.
 
-*Para un incidente con estatus Canceled (CN), Completed (CO) o Closed (CL), ya no es posible cambiar el estatus
+*Para un Incidente con Status Canceled(CN), Completed(CO) o Closed(CL) no se puede cambiar el Status
+*En caso de cumplirse la condición se lanza un mensaje de error
       IF <fs_incidents>-Status = c_status-canceled   OR
          <fs_incidents>-Status = c_status-completed  OR
          <fs_incidents>-Status = c_status-closed.
@@ -133,6 +136,7 @@ CLASS lhc_Incident IMPLEMENTATION.
 
 *Si el estado cambia a In Progress (IP), debe asignarse un RESPONSABLE
 *Solo el usuario asignado o un administrador pueden cambiar el estado de un incidente.
+*En caso de no cumplirse la condición se lanza un mensaje de error
       DATA(l_user_responsable) = cl_abap_context_info=>get_user_technical_name( ).
 
       IF <fs_incidents>-Status = c_status-inprogress  AND l_user_responsable <> 'CB9980000088'.
@@ -149,20 +153,21 @@ CLASS lhc_Incident IMPLEMENTATION.
 
       CHECK l_error = abap_false.
 
-      APPEND VALUE #( %tky   = <fs_incidents>-%tky
-                      status = l_newstatus
+*Se rellena la tabla que se usará para actualizar los datos de la vista Incident
+      APPEND VALUE #( %tky        = <fs_incidents>-%tky
+                      status      = l_newstatus
                       changedDate = cl_abap_context_info=>get_system_date( )   ) TO lt_update_incidents.
 
 
-*Obtenemos de la tabla de BBDD el HisId con el valor mayor es decir el último valor guardado,
-*teniendo en cuenta que tiene que ser del mísmo IncUuid
+*Se obtiene de la BBDD el HisId con el mayor valor, que se utilizará para asignarle el valor his_id+1,
+*teniendo en cuenta que tiene que ser del mísmo IncUuid de la vista Incident
       SELECT SINGLE FROM zdt_inct_h_088
       FIELDS MAX( his_id )
       WHERE inc_uuid = @<fs_incidents>-IncUuid AND
             his_id IS NOT INITIAL
       INTO @DATA(l_his_id).
 
-*se rellena la tabla interna con los nuevos datos
+*se rellena la tabla para crear un nuevo registro con los datos obtenidos de la vista ChangeStatus
       TRY.
           APPEND VALUE #( %tky = <fs_incidents>-%tky
                           %target = VALUE #( ( hisuuid = cl_system_uuid=>create_uuid_x16_static( )
@@ -170,15 +175,14 @@ CLASS lhc_Incident IMPLEMENTATION.
                                                hisid = l_his_id + 1
                                                PreviousStatus = l_oldstatus
                                                newstatus = l_newstatus
-                                               text = l_observation
-                                               ) )
-                                               )
-                                              TO lt_create_history.
+                                               text = l_observation ) )
+                                               )  TO lt_create_history.
         CATCH cx_uuid_error.
           "handle exception
       ENDTRY.
     ENDLOOP.
 
+*Se modifica los campos de la vista Incident
     MODIFY ENTITIES OF z_r_incident_088
    IN LOCAL MODE ENTITY Incident
    UPDATE FIELDS
@@ -186,7 +190,7 @@ CLASS lhc_Incident IMPLEMENTATION.
      ChangedDate   )
    WITH lt_update_incidents.
 
-
+*Se crea el registro nuevo para la vista History
     MODIFY ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     CREATE BY \_History
@@ -200,7 +204,9 @@ CLASS lhc_Incident IMPLEMENTATION.
     WITH lt_creatE_history
     MAPPED mapped.
 
-
+*Se vuelve a leer la vista Incident con los datos actualizados,
+*con el result hace que refresque la instancia del padre Incident
+*en el fronted automáticamente despues de pulsar el botón ChangeStatus
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
@@ -208,14 +214,15 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     result = VALUE #( FOR ls_Incident IN lt_incidents ( %tky   = ls_incident-%tky
                                                         %param = ls_incident             ) ).
-
-
   ENDMETHOD.
+
+
+
+
 
   METHOD set_inital_values.
 
-*Lectura de la entidad y obtenemos todos los campos de la entidad z_r_incident_088
-*se guardan los datos en la tabla interna incident
+*Lectura de todos los campos de la vista Incident
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
@@ -226,13 +233,12 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     CHECK incidents IS NOT INITIAL.
 
-*Obtenemos de la tabla de BBDD el IncidentId con el valor mayor es decir el último valor guardado
-*Status = 'OP'
-*CretionDate con la fecha del systema
+*Se obtiene de la tabla de BBDD el IncidentId con el mayor valor para despues asignarle IncidentId + 1
     SELECT SINGLE FROM zdt_inct_088
     FIELDS MAX( incident_id )
     INTO @DATA(l_incident).
 
+*Se asigna los valores por defecto inciales de la instancia que se va a crear de la vista Incident
     MODIFY ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     UPDATE FIELDS ( IncidentId
@@ -244,13 +250,13 @@ CLASS lhc_Incident IMPLEMENTATION.
                       status = 'OP'
                       CreationDate = cl_abap_context_info=>get_system_date( )
                       ) ).
-
   ENDMETHOD.
+
+
 
   METHOD new_record_history.
 
-*al guardar el regsitro creado de Incident, ejecuta la acción interna: new_record,
-*la acción new record creara un registro en la tabla History
+*Se modifica la vista Incident ejecutando la accion interna "New_Record"
     MODIFY ENTITIES OF z_r_incident_088
     IN LOCAL MODE
     ENTITY Incident
@@ -259,13 +265,14 @@ CLASS lhc_Incident IMPLEMENTATION.
   ENDMETHOD.
 
 
+
+
   METHOD new_record.
 
     DATA lt_history_create TYPE TABLE FOR CREATE z_r_incident_088\_History.
 
 
-*Lectura de la entidad y obtenemos todos los campos de la entidad z_r_incident_088
-*se guardan los datos en la tabla interna incident
+*Lectura de todos los campos de la vista Incident
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
@@ -274,15 +281,15 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     LOOP AT incidents ASSIGNING FIELD-SYMBOL(<fs_incidents>).
 
-*Obtenemos de la tabla de BBDD el HisId con el valor mayor es decir el último valor guardado,
-*teniendo en cuenta que tiene que ser del mísmo IncUuid
+*Se obtiene de la tabla de BBDD el HisId con el mayor valor para despues asignarle HistId + 1,
+*filtrando por clave que une a las dos vistas Incident(Padre)->Hsitory(Hija)
       SELECT SINGLE FROM zdt_inct_h_088
       FIELDS MAX( his_id )
       WHERE inc_uuid = @<fs_incidents>-IncUuid AND
             his_id IS NOT INITIAL
       INTO @DATA(l_his_id).
 
-*Se inserta el registro con los valores iniciales a la tabla interna
+*Se inserta el registro con los valores iniciales a la tabla interna para crear un registro a la vista History
       TRY.
           APPEND VALUE #( %tky = <fs_incidents>-%tky
                           %target = VALUE #( ( hisuuid = cl_system_uuid=>create_uuid_x16_static( )
@@ -299,8 +306,8 @@ CLASS lhc_Incident IMPLEMENTATION.
     ENDLOOP.
 
 
-*Se inserta el registro en la tabla History
-    MODIFY ENTITIES OF z_r_incident_088
+*Se crea el registro a la BBDD de la vista History
+   MODIFY ENTITIES OF z_r_incident_088
    IN LOCAL MODE ENTITY Incident
    CREATE BY \_History
    FIELDS ( HisUuid
@@ -311,13 +318,14 @@ CLASS lhc_Incident IMPLEMENTATION.
             Text )
    AUTO FILL CID
    WITH lt_history_create.
-
   ENDMETHOD.
+
+
+
 
   METHOD validate_required_fields.
 
-*Lectura de la entidad y obtenemos todos los campos de la entidad z_r_incident_088
-*se guardan los datos en la tabla interna incident
+*Lectura de todos los campos de la vista Incident
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
@@ -325,6 +333,8 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     CHECK incidents IS NOT INITIAL.
 
+*Validación de los campos que son obligatorios ser informado para crear una Incidencia
+*En caso de no cumplirse la condición se lanza un mensaje de error
     LOOP AT incidents INTO DATA(ls_incident).
 
       IF ls_incident-IncidentId IS INITIAL.
@@ -373,13 +383,13 @@ CLASS lhc_Incident IMPLEMENTATION.
                         ) TO reported-incident.
       ENDIF.
     ENDLOOP.
-
   ENDMETHOD.
+
+
 
   METHOD validate_range_dates.
 
-*Lectura de la entidad y obtenemos todos los campos de la entidad z_r_incident_088
-*se guardan los datos en la tabla interna incident
+*Lectura de todos los campos de la vista Incident
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
@@ -387,6 +397,8 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     CHECK incidents IS NOT INITIAL.
 
+*Se comprueba que la fecha del campo ChangeDate sea un fecha posterior a la fecha del campo CreationDate
+*En caso de no cumplirse la condición se lanza un mensaje de error
     LOOP AT incidents INTO DATA(ls_incident).
 
       IF ( ls_incident-CreationDate IS NOT INITIAL AND
@@ -406,8 +418,11 @@ CLASS lhc_Incident IMPLEMENTATION.
   ENDMETHOD.
 
 
+
+
   METHOD validate_change_status.
 
+*Lectura de todos los campos de la vista Incident
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
@@ -415,8 +430,9 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     LOOP AT incidents INTO DATA(ls_incidents).
 
-*Si el estado cambia a In Progress (IP), debe asignarse un responsable
+*Si el estado cambia a In Progress (IP), debe asignarse un RESPONSABLE
 *Solo el usuario asignado o un administrador pueden cambiar el estado de un incidente.
+*En caso de no cumplirse la condición se lanza un mensaje de error
       DATA(l_user_responsable) = cl_abap_context_info=>get_user_technical_name( ).
 
       IF ls_incidents-Status = c_status-inprogress  AND l_user_responsable <> 'CB9980000088'.
@@ -433,22 +449,23 @@ CLASS lhc_Incident IMPLEMENTATION.
   ENDMETHOD.
 
 
+
 METHOD validate_status_op.
 
     CHECK keys IS NOT INITIAL.
 
-*Con la tabla de validación KEYS se obtiene de la BBDD el registro que se quiere eliminar
-* mediante el InncUuid(UUID clave única por registro)
+*Con la tabla KEYS se obtiene de la BBDD el registro que se quiere eliminar mediante el InncUuid(UUID clave única por registro)
     SELECT inc_uuid, status
         FROM zdt_inct_088
         FOR ALL ENTRIES IN @keys
         WHERE inc_uuid = @keys-IncUuid
         INTO TABLE @DATA(lt_db_incidents).
 
-    LOOP AT lt_db_incidents INTO DATA(ls_db_incident).
 
-*Se comprueba que tenga el STATUS = 'OP' (Abierto) si es así se va a buscar mediante el UUID para obtener el %TKY
-*para mostrar el mensaje de error y bloquear la acción
+*Se comprueba que la instancia seleccionada tenga el Status = Open(OP)
+*si la condición se cumplir obtenemos la tabla KEYS mediante el UUID para obtener el %TKY
+*para pasarle al failed y reported la instancia exacta que lanza el error ya que los registros con Status Open(OP) no se peuden eliminar
+    LOOP AT lt_db_incidents INTO DATA(ls_db_incident).
       IF ls_db_incident-status = c_status-open.
         READ TABLE keys INTO DATA(ls_key) WITH KEY IncUuid = ls_db_incident-inc_uuid.
         IF sy-subrc = 0.
