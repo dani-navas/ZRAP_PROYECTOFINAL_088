@@ -22,7 +22,7 @@ define behavior for Z_c_INCIDENT_088 alias Incident
 
 define behavior for Z_c_history_088 alias History
 {
-  use update;
+//  use update;
   use delete;
 
   use association _Incident;

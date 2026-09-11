@@ -1,7 +1,7 @@
 @Metadata.layer: #INDUSTRY
 
 @UI:  { createHidden: true,// desactvian los botones standard
-        updateHidden: true,// desactvian los botones standard
+//        updateHidden: true,// desactvian los botones standard
         deleteHidden: true,// desactvian los botones standard
         headerInfo: {   typeName: 'Incident', typeNamePlural: 'History',
         title:      {   type: #STANDARD, value: 'HisId'  }  },

@@ -3,7 +3,7 @@
 @Metadata.ignorePropagatedAnnotations: true
 define root view entity Z_R_INCIDENT_088
   as select from zdt_inct_088
-  composition [0..*] of Z_R_history_088  as _History
+  composition [0..*] of Z_R_history_088  as _History 
   association [0..1] to z_r_status_088   as _Status   on _Status.StatusCode = $projection.Status
   association [0..1] to Z_R_priority_088 as _Priority on _Priority.PriorityCode = $projection.Priority
 {

@@ -41,6 +41,9 @@ authorization master ( global, instance )
   LastChangedAt;
 
 
+  // activar el comportamiento del campo Status en la instancia
+  field ( features : instance ) Status;
+
 
   //  ****** ACCIONES ******
 
@@ -49,7 +52,6 @@ authorization master ( global, instance )
 
   // acción interna que llamada por la determinación (new_record_history) para crear un regsitro a la vista History
   internal action new_record;
-
 
 
 
@@ -68,7 +70,6 @@ authorization master ( global, instance )
 
   // validar en el boton "Delete" que si la incidencia esta con Status Open(OP) no se puede eliminar
   validation validate_status_op on save { delete; }
-
 
 
 
@@ -124,7 +125,6 @@ authorization master ( global, instance )
 
 
 
-
 // ************** HISTORY ***************** //
 define behavior for Z_R_history_088 alias History
 persistent table zdt_inct_h_088
@@ -135,7 +135,7 @@ etag master LocalLastChangedAt
 
 {
 
-  update;
+//  update;
   delete;
 
   association _Incident;

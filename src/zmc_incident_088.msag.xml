@@ -54,7 +54,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZMC_INCIDENT_088</ARBGB>
      <MSGNR>008</MSGNR>
-     <TEXT>Los Status Completed(CO),  Closed(CL) o Canceled(CN) no se pueden modicar</TEXT>
+     <TEXT>Inc.Status Completed(CO), Closed(CL) o Canceled(CN) no se puede modificar</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

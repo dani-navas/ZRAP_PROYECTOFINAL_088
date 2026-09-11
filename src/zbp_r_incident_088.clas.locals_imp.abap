@@ -61,26 +61,36 @@ CLASS lhc_Incident IMPLEMENTATION.
 
   METHOD get_instance_features.
 
+    DATA l_error TYPE abap_boolean.
+
 *Lectura de todos los campos de la vista Incident
     READ ENTITIES OF z_r_incident_088
     IN LOCAL MODE ENTITY Incident
     ALL FIELDS WITH CORRESPONDING #( keys )
-    RESULT DATA(incidents).
+    RESULT DATA(incidents)
+    FAILED failed.
 
 *Dentro del detalle de una Incidencia y se le da al boton "Editar" desactivo el boton ChangeStatus,
 *ya que en el modo "Editar" se tiene la opción de cambiar el campo Status
     result = VALUE #( FOR ls_incident IN incidents ( %tky = ls_incident-%tky
-                                                     %action-ChangeStatus = COND #( WHEN ls_incident-%is_draft = if_abap_behv=>mk-on
-                                                                                    THEN if_abap_behv=>fc-o-disabled
-                                                                                    ELSE if_abap_behv=>fc-o-enabled  )
-                                                                                      )  ).
+                                                    %action-ChangeStatus = COND #(  WHEN ls_incident-Status = c_status-canceled OR
+                                                                                 ls_incident-Status = c_status-completed OR
+                                                                                 ls_incident-Status = c_status-closed
+                                                                            THEN if_abap_behv=>fc-o-disabled
+                                                                            ELSE if_abap_behv=>fc-o-enabled  )
+
+*Para un Incidente con Status Canceled(cn), Completed(co) o Closed(cl) no se puede cambiar el Status
+*El campo se desactiva y solo es de lectura
+                                                     %field-Status = COND #( WHEN ls_incident-Status = c_status-canceled OR
+                                                                                 ls_incident-Status = c_status-completed OR
+                                                                                 ls_incident-Status = c_status-closed
+                                                                            THEN if_abap_behv=>fc-f-read_only
+                                                                            ELSE if_abap_behv=>fc-f-unrestricted  )
+                                                                            ) ).
   ENDMETHOD.
 
 
-
-
-
- METHOD ChangeStatus.
+  METHOD ChangeStatus.
 
     DATA l_error TYPE abap_boolean.
 
@@ -307,17 +317,17 @@ CLASS lhc_Incident IMPLEMENTATION.
 
 
 *Se crea el registro a la BBDD de la vista History
-   MODIFY ENTITIES OF z_r_incident_088
-   IN LOCAL MODE ENTITY Incident
-   CREATE BY \_History
-   FIELDS ( HisUuid
-            IncUuid
-            HisId
-            PreviousStatus
-            NewStatus
-            Text )
-   AUTO FILL CID
-   WITH lt_history_create.
+    MODIFY ENTITIES OF z_r_incident_088
+    IN LOCAL MODE ENTITY Incident
+    CREATE BY \_History
+    FIELDS ( HisUuid
+             IncUuid
+             HisId
+             PreviousStatus
+             NewStatus
+             Text )
+    AUTO FILL CID
+    WITH lt_history_create.
   ENDMETHOD.
 
 
@@ -450,7 +460,7 @@ CLASS lhc_Incident IMPLEMENTATION.
 
 
 
-METHOD validate_status_op.
+  METHOD validate_status_op.
 
     CHECK keys IS NOT INITIAL.
 

@@ -34,7 +34,6 @@ annotate entity Z_c_INCIDENT_088 with
   IncidentId;
 
   @UI.lineItem: [{ position: 20, importance: #LOW, label: 'Title' }]
-  //  @UI.selectionField: [{position: 20 }]
   @UI.identification: [{position: 20 }]
   Title;
 
