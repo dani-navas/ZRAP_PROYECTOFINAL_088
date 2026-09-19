@@ -107,12 +107,12 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     LOOP AT incidents ASSIGNING FIELD-SYMBOL(<fs_incidents>).
 
+*Status actual antes de cambiar el valor por el Status se se ha informado por parámetro
+      DATA(l_oldstatus)  =  <fs_incidents>-Status.
+
 *Se obtiene los valores de los parámetros(Status,Observación) de la vista que abre el boton ChangeStatus
       DATA(l_newstatus)   = keys[ KEY id %tky = <fs_incidents>-%tky ]-%param-Status.
       DATA(l_observation) = keys[ KEY id %tky = <fs_incidents>-%tky ]-%param-description.
-
-*Status actual antes de cambiar el valor por el Status se se ha informado por parámetro
-      DATA(l_oldstatus)  =  <fs_incidents>-Status.
 
 *No se puede cambiar un incidente a Completed(CO) o Closed(CL) si todavía está en In Pending(PE)
 *En caso de cumplirse la condición se lanza un mensaje de error
@@ -343,7 +343,7 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     CHECK incidents IS NOT INITIAL.
 
-*Validación de los campos que son obligatorios ser informado para crear una Incidencia
+*Validación de los campos que son obligatorios para crear una Incidencia
 *En caso de no cumplirse la condición se lanza un mensaje de error
     LOOP AT incidents INTO DATA(ls_incident).
 
@@ -473,8 +473,8 @@ CLASS lhc_Incident IMPLEMENTATION.
 
 
 *Se comprueba que la instancia seleccionada tenga el Status = Open(OP)
-*si la condición se cumplir obtenemos la tabla KEYS mediante el UUID para obtener el %TKY
-*para pasarle al failed y reported la instancia exacta que lanza el error ya que los registros con Status Open(OP) no se peuden eliminar
+*si la condición se cumple obtenemos la tabla KEYS mediante el UUID para obtener el %TKY
+*para pasarle al failed y reported la instancia exacta que lanza el error
     LOOP AT lt_db_incidents INTO DATA(ls_db_incident).
       IF ls_db_incident-status = c_status-open.
         READ TABLE keys INTO DATA(ls_key) WITH KEY IncUuid = ls_db_incident-inc_uuid.

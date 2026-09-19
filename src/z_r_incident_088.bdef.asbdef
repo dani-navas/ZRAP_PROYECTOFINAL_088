@@ -69,7 +69,7 @@ authorization master ( global, instance )
   validation validate_change_status on save { field status; }
 
   // validar en el boton "Delete" que si la incidencia esta con Status Open(OP) no se puede eliminar
-  validation validate_status_op on save { delete; }
+  validation validate_status_op on save {   delete; }
 
 
 
